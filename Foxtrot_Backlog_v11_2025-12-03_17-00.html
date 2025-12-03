@@ -1,0 +1,1476 @@
+<html lang="tr"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foxtrot Backlog (v11)</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #2d3748;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 2000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        /* Header & Toolbar */
+        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 20px; }
+        .header-left { flex: 1; min-width: 300px; }
+        .header-left h1 {
+            font-size: 2.5em; margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            font-weight: 700; outline: none; border-bottom: 2px solid transparent;
+        }
+        .header-left h1:focus { border-bottom: 2px solid #667eea; }
+        .subtitle { color: #718096; font-size: 1.1em; padding: 2px 5px; border: 1px dashed transparent; border-radius: 4px; }
+        .subtitle:focus { outline: 2px solid #667eea; background: white; }
+        
+        .toolbar { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+        .search-box { position: relative; flex-grow: 1; }
+        .search-input { padding: 10px 15px 10px 35px; border: 2px solid #e2e8f0; border-radius: 8px; width: 100%; min-width: 200px; }
+        .search-input:focus { border-color: #667eea; outline: none; }
+        .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #a0aec0; }
+        .btn { color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px; }
+        .save-btn { background: linear-gradient(135deg, #4c51bf 0%, #667eea 100%); }
+        .save-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(76, 81, 191, 0.3); }
+        .add-btn { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+        .add-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(16, 185, 129, 0.3); }
+
+        /* Table */
+        .table-wrapper { overflow-x: auto; position: relative; margin-top: 20px; padding-bottom: 50px; border: 1px solid #e2e8f0; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875em; min-width: 1200px; }
+        thead { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        th { padding: 12px 10px; text-align: left; font-weight: 600; position: sticky; top: 0; z-index: 10; white-space: nowrap; user-select: none; }
+        
+        /* Column Filter Styles (SVG Icon) */
+        .filter-icon { 
+            cursor: pointer; margin-left: 6px; opacity: 0.6; width: 14px; height: 14px; vertical-align: middle; fill: currentColor; display: inline-block;
+            transition: opacity 0.2s;
+        }
+        .filter-icon:hover, .filter-icon.active { opacity: 1; fill: #ffd700; }
+        
+        .filter-dropdown {
+            position: absolute; top: 100%; left: 0; background: white; border: 1px solid #cbd5e0; 
+            border-radius: 6px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); padding: 10px; 
+            z-index: 100; min-width: 200px; display: none; color: #2d3748;
+            max-height: 300px; overflow-y: auto;
+        }
+        .filter-dropdown.show { display: block; }
+        .filter-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; cursor: pointer; border-radius: 4px; font-weight: normal; }
+        .filter-option:hover { background: #edf2f7; }
+        .filter-option b { color: #667eea; }
+
+        /* Rows & Dragging */
+        tbody tr { transition: background 0.2s; background: white; height: 45px; border-bottom: 1px solid #e2e8f0; }
+        tbody tr:hover { background: #f7fafc; }
+        tbody tr.locked-row { background: #edf2f7; }
+        
+        /* Visual Drag Feedback */
+        tbody tr.drag-over-top { border-top: 3px solid #667eea !important; }
+        tbody tr.drag-over-bottom { border-bottom: 3px solid #667eea !important; }
+        
+        td { padding: 8px 10px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 45px; }
+        .editable { cursor: text; border-radius: 3px; padding: 4px 6px; }
+        .editable:focus { outline: 2px solid #667eea; background: #fffef0; white-space: normal; z-index: 5; position: relative; }
+        .epic-link { color: #5a67d8; font-weight: 600; cursor: pointer; text-decoration: none; }
+        .epic-link:hover { text-decoration: underline; }
+        .styled-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: #667eea; }
+        .tag-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; background: #ebf4ff; color: #4c51bf; font-size: 0.85em; border: 1px solid #c3dafe; cursor: pointer; }
+        
+        .pri-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 700; cursor: pointer; text-align: center; min-width: 30px; }
+        .pri-1 { background: #feb2b2; color: #9b2c2c; }
+        .pri-2 { background: #fbd38d; color: #9c4221; }
+        .pri-3 { background: #faf089; color: #744210; }
+        .pri-4 { background: #9ae6b4; color: #22543d; }
+        .pri-5 { background: #90cdf4; color: #2a4365; }
+        .pri-6 { background: #e9d8fd; color: #44337a; }
+
+        .action-cell { display: flex; align-items: center; gap: 5px; }
+        .drag-handle { cursor: grab; color: #a0aec0; font-weight: bold; padding: 0 5px; font-size: 1.2em; }
+        .lock-toggle { opacity: 0; cursor: pointer; margin-left: 5px; }
+        tbody tr:hover .lock-toggle { opacity: 0.6; }
+        .lock-toggle:hover { opacity: 1 !important; }
+        .locked-state { color: #4a5568; cursor: pointer; padding-left: 5px; }
+
+        .dep-tag { border-bottom: 1px dotted #667eea; cursor: help; color: #2d3748; margin-right: 3px; }
+        .dep-alarm { color: #e53e3e; cursor: help; margin-left: 5px; font-weight: bold; animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; backdrop-filter: blur(4px); align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; padding: 30px; border-radius: 16px; width: 95%; max-width: 1100px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 1.5em; cursor: pointer; color: #a0aec0; }
+        .modal-header h2 { margin-bottom: 10px; font-size: 1.5em; color: #2d3748; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
+        
+        /* Improved Priority Reason Box */
+        .priority-card {
+            background: #f8fafc;
+            border-left: 5px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .priority-card-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+            color: #4a5568; font-weight: 700; font-size: 1.1em;
+        }
+        .priority-card-content {
+            color: #2d3748; font-size: 1.05em; line-height: 1.6;
+        }
+
+        .dependency-box { background: #fffaf0; border: 1px solid #fbd38d; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .story-table { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+        .story-table th { background: #f7fafc; color: #4a5568; font-weight: 600; padding: 10px; text-align: left; }
+        .story-table td { border-top: 1px solid #e2e8f0; white-space: normal; vertical-align: top; padding: 12px; }
+        .gherkin { font-family: 'Courier New', monospace; background: #f7fafc; padding: 10px; border-radius: 6px; font-size: 0.9em; line-height: 1.6; }
+        .kw { color: #5a67d8; font-weight: bold; }
+
+        /* Dropdowns */
+        .custom-dropdown { position: absolute; background: white; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border-radius: 8px; padding: 8px; z-index: 100; display: none; }
+        .custom-dropdown.active { display: block; }
+        .dropdown-item { padding: 8px 12px; cursor: pointer; display: flex; justify-content: space-between; }
+        .dropdown-item:hover { background: #f7fafc; color: #667eea; }
+        .priority-popup { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); z-index: 2000; display: none; }
+        .priority-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .p-opt { padding: 10px 20px; border-radius: 6px; cursor: pointer; text-align: center; border: 2px solid transparent; font-weight: bold; }
+        .p-opt:hover { transform: scale(1.05); }
+
+        /* Status Msg */
+        #status-message { position: fixed; bottom: 20px; right: 20px; padding: 12px 24px; background: #2d3748; color: white; border-radius: 8px; display: none; z-index: 3000; }
+        
+        /* Add Modal */
+        #add-epic-modal .modal-content { max-width: 500px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 8px; border: 2px solid #e2e8f0; border-radius: 6px; }
+    </style>
+</head>
+<body>
+    <!-- SVG Definitions for Funnel Icon -->
+    <svg style="display: none;">
+        <symbol id="icon-filter" viewBox="0 0 24 24">
+            <path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"></path>
+        </symbol>
+    </svg>
+
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1 contenteditable="true">📋 Foxtrot Squad Backlog</h1>
+                <p class="subtitle" contenteditable="true">65 Epic • Sütun Filtreleme • Gelişmiş Sürükle/Bırak</p>
+            </div>
+            <div class="toolbar">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" class="search-input" placeholder="Global arama..." onkeyup="renderTable()">
+                </div>
+                <button class="btn add-btn" onclick="openAddModal()">+ Yeni Epic</button>
+                <button class="btn save-btn" onclick="downloadHTML()">💾 Kaydet</button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="main-table">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th style="width:60px;">⋮⋮</th>
+                        <th style="width:100px;">Code <svg class="filter-icon" onclick="toggleFilterMenu(event, 'code')"><use href="#icon-filter"></use></svg></th>
+                        <th style="width:250px;">Epic Name <svg class="filter-icon" onclick="toggleFilterMenu(event, 'name')"><use href="#icon-filter"></use></svg></th>
+                        <th style="width:60px;">Pri <svg class="filter-icon" onclick="toggleFilterMenu(event, 'pri')"><use href="#icon-filter"></use></svg></th>
+                        <th style="width:60px;">Link</th>
+                        <th style="width:140px;">Dependencies</th>
+                        <th style="width:60px;">Story</th>
+                        <th style="width:120px;">Key User <svg class="filter-icon" onclick="toggleFilterMenu(event, 'key_user')"><use href="#icon-filter"></use></svg></th>
+                        <th style="width:80px; text-align:center;">Portal</th>
+                        <th style="width:80px; text-align:center;">NaviPar</th>
+                        <th style="width:200px;">Why Priority <svg class="filter-icon" onclick="toggleFilterMenu(event, 'priority_tag')"><use href="#icon-filter"></use></svg></th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"><tr data-index="0" data-code="FRW-01" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">1</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('FRW-01')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-01','code',this)"><span class="category-icon icon-Framework"></span>FRW-01</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-01')">Authentication</a></td>
+                    <td><div class="pri-badge pri-1" onclick="openPriorityPopup('FRW-01')">1</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-01','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-01',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-01','story',this)">6</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-01','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-01','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-01','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-01')">🛡️ Security</span></td>
+                </tr><tr data-index="1" data-code="FRW-02" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">2</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('FRW-02')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-02','code',this)"><span class="category-icon icon-Framework"></span>FRW-02</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-02')">Authorization</a></td>
+                    <td><div class="pri-badge pri-1" onclick="openPriorityPopup('FRW-02')">1</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-02','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-02',this)"><span class="dep-tag" title="Authentication">FRW-01</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-02','story',this)">5</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-02','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-02','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-02','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-02')">🛡️ Security</span></td>
+                </tr><tr data-index="2" data-code="FRW-03" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">3</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('FRW-03')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-03','code',this)"><span class="category-icon icon-Framework"></span>FRW-03</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-03')">Reusable Components</a></td>
+                    <td><div class="pri-badge pri-1" onclick="openPriorityPopup('FRW-03')">1</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-03','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-03',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-03','story',this)">7</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-03','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-03','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-03','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-03')">💡 User Experience</span></td>
+                </tr><tr data-index="3" data-code="MDM-30" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">4</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('MDM-30')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-30','code',this)"><span class="category-icon icon-MDM"></span>MDM-30</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-30')">Users</a></td>
+                    <td><div class="pri-badge pri-1" onclick="openPriorityPopup('MDM-30')">1</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-30','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-30',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-30','story',this)">0</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-30','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-30','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-30','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-30')">📌 General</span></td>
+                </tr><tr data-index="4" data-code="CF-01" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">5</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('CF-01')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-01','code',this)"><span class="category-icon icon-Core"></span>CF-01</td>
+                    <td><a class="epic-link" onclick="openModal('CF-01')">User &amp; User Group Mgmt</a></td>
+                    <td><div class="pri-badge pri-1" onclick="openPriorityPopup('CF-01')">1</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-01','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-01',this)"><span class="dep-tag" title="Authentication">FRW-01</span>, <span class="dep-tag" title="Authorization">FRW-02</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-01','story',this)">5</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-01','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('CF-01','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('CF-01','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-01')">🛡️ Security</span></td>
+                </tr><tr data-index="5" data-code="FRW-16" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">6</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('FRW-16')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-16','code',this)"><span class="category-icon icon-Framework"></span>FRW-16</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-16')">System Configuration</a></td>
+                    <td><div class="pri-badge pri-1" onclick="openPriorityPopup('FRW-16')">1</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-16','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-16',this)"><span class="dep-tag" title="Authentication">FRW-01</span>, <span class="dep-tag" title="Authorization">FRW-02</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-16','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-16','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('FRW-16','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-16','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-16')">⚙️ Configuration</span></td>
+                </tr><tr data-index="6" data-code="MDM-06" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">7</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('MDM-06')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-06','code',this)"><span class="category-icon icon-MDM"></span>MDM-06</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-06')">Countries</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-06')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-06','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-06',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-06','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-06','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('MDM-06','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('MDM-06','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-06')">📌 General</span></td>
+                </tr><tr data-index="7" data-code="MDM-07" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">8</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('MDM-07')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-07','code',this)"><span class="category-icon icon-MDM"></span>MDM-07</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-07')">Cities</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-07')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-07','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-07',this)"><span class="dep-tag" title="Countries">MDM-06</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-07','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-07','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('MDM-07','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('MDM-07','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-07')">📌 General</span></td>
+                </tr><tr data-index="8" data-code="MDM-04" class="locked-row">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">9</td>
+                    <td><div class="action-cell"><span class="locked-state" onclick="toggleLock('MDM-04')">🔒</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-04','code',this)"><span class="category-icon icon-MDM"></span>MDM-04</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-04')">Airports</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-04')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-04','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-04',this)"><span class="dep-tag" title="Countries">MDM-06</span>, <span class="dep-tag" title="Cities">MDM-07</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-04','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-04','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('MDM-04','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" checked="" onchange="toggleCheckbox('MDM-04','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-04')">🔥 Critical Path</span></td>
+                </tr><tr data-index="9" data-code="FRW-10" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">10</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-10')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-10','code',this)"><span class="category-icon icon-Framework"></span>FRW-10</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-10')">Filtering &amp; Sorting</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('FRW-10')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-10','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-10',this)"><span class="dep-tag" title="Reusable Components">FRW-03</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-10','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-10','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-10','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-10','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-10')">💡 User Experience</span></td>
+                </tr><tr data-index="10" data-code="FRW-17" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">11</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-17')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-17','code',this)"><span class="category-icon icon-Framework"></span>FRW-17</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-17')">Global Error Handling</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('FRW-17')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-17','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-17',this)"><span class="dep-tag" title="Authentication">FRW-01</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-17','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-17','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-17','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-17','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-17')">🏗️ Infrastructure</span></td>
+                </tr><tr data-index="11" data-code="FRW-04" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">12</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-04')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-04','code',this)"><span class="category-icon icon-Framework"></span>FRW-04</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-04')">Menu &amp; Navigation</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('FRW-04')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-04','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-04',this)"><span class="dep-tag" title="Authorization">FRW-02</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-04','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-04','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-04','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-04','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-04')">💡 User Experience</span></td>
+                </tr><tr data-index="12" data-code="FRW-20" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">13</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-20')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-20','code',this)"><span class="category-icon icon-Framework"></span>FRW-20</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-20')">Audit Logging</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('FRW-20')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-20','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-20',this)"><span class="dep-tag" title="Authentication">FRW-01</span>, <span class="dep-tag" title="System Configuration">FRW-16</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-20','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-20','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-20','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-20','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-20')">🛡️ Security</span></td>
+                </tr><tr data-index="13" data-code="FRW-21" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">14</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-21')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-21','code',this)"><span class="category-icon icon-Framework"></span>FRW-21</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-21')">Application Logging</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('FRW-21')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-21','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-21',this)"><span class="dep-tag" title="Authentication">FRW-01</span>, <span class="dep-tag" title="Audit Logging">FRW-20</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-21','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-21','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-21','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-21','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-21')">🏗️ Infrastructure</span></td>
+                </tr><tr data-index="14" data-code="CF-02" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">15</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-02')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-02','code',this)"><span class="category-icon icon-Core"></span>CF-02</td>
+                    <td><a class="epic-link" onclick="openModal('CF-02')">Role &amp; Role Group Mgmt</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('CF-02')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-02','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-02',this)"><span class="dep-tag" title="User &amp; User Group Mgmt">CF-01</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-02','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-02','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-02','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-02','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-02')">🛡️ Security</span></td>
+                </tr><tr data-index="15" data-code="CF-04" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">16</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-04')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-04','code',this)"><span class="category-icon icon-Core"></span>CF-04</td>
+                    <td><a class="epic-link" onclick="openModal('CF-04')">Parameter Mgmt</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('CF-04')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-04','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-04',this)"><span class="dep-tag" title="System Configuration">FRW-16</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-04','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-04','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-04','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-04','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-04')">⚙️ Configuration</span></td>
+                </tr><tr data-index="16" data-code="MDM-22" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">17</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-22')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-22','code',this)"><span class="category-icon icon-MDM"></span>MDM-22</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-22')">Timezones</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-22')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-22','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-22',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-22','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-22','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-22','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-22','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-22')">📌 General</span></td>
+                </tr><tr data-index="17" data-code="MDM-25" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">18</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-25')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-25','code',this)"><span class="category-icon icon-MDM"></span>MDM-25</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-25')">Flights</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-25')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-25','link',this)">3 <span class="dep-alarm" title="MDM-11 (Row: 55) is below!
+MDM-18 (Row: 58) is below!
+">❗</span></td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-25',this)"><span class="dep-tag" title="Airlines">MDM-11</span>, <span class="dep-tag" title="Airports">MDM-04</span>, <span class="dep-tag" title="Aircraft Types">MDM-18</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-25','story',this)">5</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-25','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-25','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-25','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-25')">🔥 Critical Path</span></td>
+                </tr><tr data-index="18" data-code="MDM-26" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">19</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-26')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-26','code',this)"><span class="category-icon icon-MDM"></span>MDM-26</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-26')">Flight Schedules</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-26')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-26','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-26',this)"><span class="dep-tag" title="Flights">MDM-25</span>, <span class="dep-tag" title="Timezones">MDM-22</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-26','story',this)">5</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-26','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-26','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-26','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-26')">🔥 Critical Path</span></td>
+                </tr><tr data-index="19" data-code="MDM-27" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">20</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-27')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-27','code',this)"><span class="category-icon icon-MDM"></span>MDM-27</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-27')">Flight Status</a></td>
+                    <td><div class="pri-badge pri-2" onclick="openPriorityPopup('MDM-27')">2</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-27','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-27',this)"><span class="dep-tag" title="Flight Schedules">MDM-26</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-27','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-27','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-27','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-27','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-27')">🔥 Critical Path</span></td>
+                </tr><tr data-index="20" data-code="FRW-14" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">21</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-14')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-14','code',this)"><span class="category-icon icon-Framework"></span>FRW-14</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-14')">Attachments</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-14')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-14','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-14',this)"><span class="dep-tag" title="Authentication">FRW-01</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-14','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-14','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-14','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-14','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-14')">📌 General</span></td>
+                </tr><tr data-index="21" data-code="FRW-12" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">22</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-12')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-12','code',this)"><span class="category-icon icon-Framework"></span>FRW-12</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-12')">Excel Export</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-12')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-12','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-12',this)"><span class="dep-tag" title="Reusable Components">FRW-03</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-12','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-12','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-12','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-12','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-12')">📌 General</span></td>
+                </tr><tr data-index="22" data-code="FRW-13" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">23</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-13')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-13','code',this)"><span class="category-icon icon-Framework"></span>FRW-13</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-13')">Bulk Operations</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-13')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-13','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-13',this)"><span class="dep-tag" title="Reusable Components">FRW-03</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-13','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-13','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-13','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-13','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-13')">💡 User Experience</span></td>
+                </tr><tr data-index="23" data-code="FRW-18" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">24</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-18')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-18','code',this)"><span class="category-icon icon-Framework"></span>FRW-18</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-18')">Global Data Validation</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-18')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-18','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-18',this)"><span class="dep-tag" title="Reusable Components">FRW-03</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-18','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-18','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-18','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-18','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-18')">🛡️ Security</span></td>
+                </tr><tr data-index="24" data-code="FRW-19" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">25</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-19')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-19','code',this)"><span class="category-icon icon-Framework"></span>FRW-19</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-19')">Global Loading States</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-19')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-19','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-19',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-19','story',this)">2</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-19','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-19','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-19','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-19')">💡 User Experience</span></td>
+                </tr><tr data-index="25" data-code="FRW-15" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">26</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-15')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-15','code',this)"><span class="category-icon icon-Framework"></span>FRW-15</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-15')">API &amp; Integration Layer</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-15')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-15','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-15',this)"><span class="dep-tag" title="System Configuration">FRW-16</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-15','story',this)">5</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-15','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-15','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-15','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-15')">🏗️ Infrastructure</span></td>
+                </tr><tr data-index="26" data-code="FRW-22" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">27</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-22')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-22','code',this)"><span class="category-icon icon-Framework"></span>FRW-22</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-22')">Record History</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-22')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-22','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-22',this)"><span class="dep-tag" title="Authentication">FRW-01</span>, <span class="dep-tag" title="Audit Logging">FRW-20</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-22','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-22','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-22','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-22','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-22')">🛡️ Security</span></td>
+                </tr><tr data-index="27" data-code="FRW-23" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">28</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-23')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-23','code',this)"><span class="category-icon icon-Framework"></span>FRW-23</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-23')">Record Activity History</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('FRW-23')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-23','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-23',this)"><span class="dep-tag" title="Authentication">FRW-01</span>, <span class="dep-tag" title="Audit Logging">FRW-20</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-23','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-23','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-23','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-23','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-23')">🛡️ Security</span></td>
+                </tr><tr data-index="28" data-code="MDM-02" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">29</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-02')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-02','code',this)"><span class="category-icon icon-MDM"></span>MDM-02</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-02')">Products &amp; Services</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('MDM-02')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-02','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-02',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-02','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-02','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-02','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-02','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-02')">💰 Finance/Revenue</span></td>
+                </tr><tr data-index="29" data-code="MDM-13" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">30</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-13')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-13','code',this)"><span class="category-icon icon-MDM"></span>MDM-13</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-13')">Commodities</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('MDM-13')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-13','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-13',this)"><span class="dep-tag" title="Products &amp; Services">MDM-02</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-13','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-13','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-13','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-13','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-13')">⚖️ Compliance</span></td>
+                </tr><tr data-index="30" data-code="MDM-03" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">31</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-03')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-03','code',this)"><span class="category-icon icon-MDM"></span>MDM-03</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-03')">Stations</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('MDM-03')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-03','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-03',this)"><span class="dep-tag" title="Airports">MDM-04</span>, <span class="dep-tag" title="Cities">MDM-07</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-03','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-03','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-03','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-03','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-03')">📌 General</span></td>
+                </tr><tr data-index="31" data-code="CF-03" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">32</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-03')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-03','code',this)"><span class="category-icon icon-Core"></span>CF-03</td>
+                    <td><a class="epic-link" onclick="openModal('CF-03')">Permission (Scope) Mgmt</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-03')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-03','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-03',this)"><span class="dep-tag" title="Role &amp; Role Group Mgmt">CF-02</span>, <span class="dep-tag" title="Authorization">FRW-02</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-03','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-03','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-03','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-03','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-03')">🛡️ Security</span></td>
+                </tr><tr data-index="32" data-code="CF-05" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">33</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-05')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-05','code',this)"><span class="category-icon icon-Core"></span>CF-05</td>
+                    <td><a class="epic-link" onclick="openModal('CF-05')">Notification Mgmt</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-05')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-05','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-05',this)"><span class="dep-tag" title="System Configuration">FRW-16</span>, <span class="dep-tag" title="User &amp; User Group Mgmt">CF-01</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-05','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-05','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-05','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-05','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-05')">📌 General</span></td>
+                </tr><tr data-index="33" data-code="CF-06" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">34</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-06')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-06','code',this)"><span class="category-icon icon-Core"></span>CF-06</td>
+                    <td><a class="epic-link" onclick="openModal('CF-06')">Purging &amp; Archiving</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-06')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-06','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-06',this)"><span class="dep-tag" title="System Configuration">FRW-16</span>, <span class="dep-tag" title="Parameter Mgmt">CF-04</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-06','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-06','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-06','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-06','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-06')">🏗️ Infrastructure</span></td>
+                </tr><tr data-index="34" data-code="CF-07" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">35</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-07')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-07','code',this)"><span class="category-icon icon-Core"></span>CF-07</td>
+                    <td><a class="epic-link" onclick="openModal('CF-07')">Scheduled Jobs</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-07')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-07','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-07',this)"><span class="dep-tag" title="Parameter Mgmt">CF-04</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-07','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-07','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-07','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-07','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-07')">🏗️ Infrastructure</span></td>
+                </tr><tr data-index="35" data-code="CF-08" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">36</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-08')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-08','code',this)"><span class="category-icon icon-Core"></span>CF-08</td>
+                    <td><a class="epic-link" onclick="openModal('CF-08')">Workflows</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-08')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-08','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-08',this)"><span class="dep-tag" title="User &amp; User Group Mgmt">CF-01</span>, <span class="dep-tag" title="Role &amp; Role Group Mgmt">CF-02</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-08','story',this)">5</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-08','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-08','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-08','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-08')">📌 General</span></td>
+                </tr><tr data-index="36" data-code="CF-09" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">37</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-09')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-09','code',this)"><span class="category-icon icon-Core"></span>CF-09</td>
+                    <td><a class="epic-link" onclick="openModal('CF-09')">Messaging</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-09')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-09','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-09',this)"><span class="dep-tag" title="System Configuration">FRW-16</span>, <span class="dep-tag" title="Parameter Mgmt">CF-04</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-09','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-09','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-09','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-09','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-09')">🏗️ Infrastructure</span></td>
+                </tr><tr data-index="37" data-code="CF-10" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">38</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-10')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-10','code',this)"><span class="category-icon icon-Core"></span>CF-10</td>
+                    <td><a class="epic-link" onclick="openModal('CF-10')">Reporting</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('CF-10')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-10','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-10',this)"><span class="dep-tag" title="?">MDM</span>, <span class="dep-tag" title="Reusable Components">FRW-03</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-10','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-10','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-10','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-10','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-10')">💰 Finance/Revenue</span></td>
+                </tr><tr data-index="38" data-code="MDM-23" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">39</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-23')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-23','code',this)"><span class="category-icon icon-MDM"></span>MDM-23</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-23')">Languages</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('MDM-23')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-23','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-23',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-23','story',this)">2</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-23','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-23','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-23','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-23')">💡 User Experience</span></td>
+                </tr><tr data-index="39" data-code="MDM-24" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">40</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-24')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-24','code',this)"><span class="category-icon icon-MDM"></span>MDM-24</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-24')">ULDs</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('MDM-24')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-24','link',this)">1 <span class="dep-alarm" title="MDM-19 (Row: 59) is below!
+">❗</span></td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-24',this)"><span class="dep-tag" title="Aircraft Equipment Types">MDM-19</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-24','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-24','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-24','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-24','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-24')">📌 General</span></td>
+                </tr><tr data-index="40" data-code="MDM-28" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">41</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-28')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-28','code',this)"><span class="category-icon icon-MDM"></span>MDM-28</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-28')">Commodity Regulations</a></td>
+                    <td><div class="pri-badge pri-3" onclick="openPriorityPopup('MDM-28')">3</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-28','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-28',this)"><span class="dep-tag" title="Commodities">MDM-13</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-28','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-28','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-28','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-28','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-28')">⚖️ Compliance</span></td>
+                </tr><tr data-index="41" data-code="FRW-05" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">42</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-05')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-05','code',this)"><span class="category-icon icon-Framework"></span>FRW-05</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-05')">Home</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('FRW-05')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-05','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-05',this)"><span class="dep-tag" title="Menu &amp; Navigation">FRW-04</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-05','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-05','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-05','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-05','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-05')">💡 User Experience</span></td>
+                </tr><tr data-index="42" data-code="FRW-07" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">43</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-07')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-07','code',this)"><span class="category-icon icon-Framework"></span>FRW-07</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-07')">Quick Search</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('FRW-07')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-07','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-07',this)"><span class="dep-tag" title="Reusable Components">FRW-03</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-07','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-07','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-07','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-07','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-07')">💡 User Experience</span></td>
+                </tr><tr data-index="43" data-code="FRW-08" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">44</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-08')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-08','code',this)"><span class="category-icon icon-Framework"></span>FRW-08</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-08')">Detailed Search</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('FRW-08')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-08','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-08',this)"><span class="dep-tag" title="Reusable Components">FRW-03</span>, <span class="dep-tag" title="Quick Search">FRW-07</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-08','story',this)">4</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-08','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-08','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-08','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-08')">💡 User Experience</span></td>
+                </tr><tr data-index="44" data-code="FRW-11" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">45</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-11')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-11','code',this)"><span class="category-icon icon-Framework"></span>FRW-11</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-11')">Filter Saving</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('FRW-11')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-11','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-11',this)"><span class="dep-tag" title="Filtering &amp; Sorting">FRW-10</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-11','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-11','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-11','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-11','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-11')">💡 User Experience</span></td>
+                </tr><tr data-index="45" data-code="MDM-01" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">46</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-01')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-01','code',this)"><span class="category-icon icon-MDM"></span>MDM-01</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-01')">Routing Tables</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('MDM-01')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-01','link',this)">2 <span class="dep-alarm" title="MDM-11 (Row: 55) is below!
+">❗</span></td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-01',this)"><span class="dep-tag" title="Airports">MDM-04</span>, <span class="dep-tag" title="Airlines">MDM-11</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-01','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-01','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-01','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-01','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-01')">📌 General</span></td>
+                </tr><tr data-index="46" data-code="MDM-15" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">47</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-15')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-15','code',this)"><span class="category-icon icon-MDM"></span>MDM-15</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-15')">Handling Codes</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('MDM-15')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-15','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-15',this)"><span class="dep-tag" title="Commodities">MDM-13</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-15','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-15','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-15','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-15','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-15')">⚖️ Compliance</span></td>
+                </tr><tr data-index="47" data-code="MDM-05" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">48</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-05')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-05','code',this)"><span class="category-icon icon-MDM"></span>MDM-05</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-05')">Airport Pairs</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('MDM-05')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-05','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-05',this)"><span class="dep-tag" title="Airports">MDM-04</span>, <span class="dep-tag" title="Countries">MDM-06</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-05','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-05','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-05','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-05','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-05')">📌 General</span></td>
+                </tr><tr data-index="48" data-code="MDM-08" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">49</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-08')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-08','code',this)"><span class="category-icon icon-MDM"></span>MDM-08</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-08')">City Pairs</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('MDM-08')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-08','link',this)">2 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-08',this)"><span class="dep-tag" title="Cities">MDM-07</span>, <span class="dep-tag" title="Countries">MDM-06</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-08','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-08','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-08','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-08','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-08')">📌 General</span></td>
+                </tr><tr data-index="49" data-code="MDM-09" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">50</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-09')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-09','code',this)"><span class="category-icon icon-MDM"></span>MDM-09</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-09')">Regions</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('MDM-09')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-09','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-09',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-09','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-09','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-09','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-09','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-09')">📌 General</span></td>
+                </tr><tr data-index="50" data-code="CF-11" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">51</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('CF-11')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-11','code',this)"><span class="category-icon icon-Core"></span>CF-11</td>
+                    <td><a class="epic-link" onclick="openModal('CF-11')">Dashboards</a></td>
+                    <td><div class="pri-badge pri-4" onclick="openPriorityPopup('CF-11')">4</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-11','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('CF-11',this)"><span class="dep-tag" title="Reporting">CF-10</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-11','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('CF-11','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-11','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('CF-11','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'CF-11')">💰 Finance/Revenue</span></td>
+                </tr><tr data-index="51" data-code="FRW-06" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">52</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-06')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-06','code',this)"><span class="category-icon icon-Framework"></span>FRW-06</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-06')">My Space</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('FRW-06')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-06','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-06',this)"><span class="dep-tag" title="Home">FRW-05</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-06','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-06','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-06','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-06','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-06')">💡 User Experience</span></td>
+                </tr><tr data-index="52" data-code="FRW-24" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">53</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-24')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-24','code',this)"><span class="category-icon icon-Framework"></span>FRW-24</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-24')">Announcements</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('FRW-24')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-24','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-24',this)"><span class="dep-tag" title="Authentication">FRW-01</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-24','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-24','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-24','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-24','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-24')">💡 User Experience</span></td>
+                </tr><tr data-index="53" data-code="MDM-10" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">54</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-10')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-10','code',this)"><span class="category-icon icon-MDM"></span>MDM-10</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-10')">Airport Calendars</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('MDM-10')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-10','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-10',this)"><span class="dep-tag" title="Airports">MDM-04</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-10','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-10','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-10','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-10','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-10')">📌 General</span></td>
+                </tr><tr data-index="54" data-code="MDM-11" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">55</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-11')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-11','code',this)"><span class="category-icon icon-MDM"></span>MDM-11</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-11')">Airlines</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('MDM-11')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-11','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-11',this)"><span class="dep-tag" title="Countries">MDM-06</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-11','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-11','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-11','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-11','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-11')">📌 General</span></td>
+                </tr><tr data-index="55" data-code="MDM-16" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">56</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-16')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-16','code',this)"><span class="category-icon icon-MDM"></span>MDM-16</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-16')">Currencies</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('MDM-16')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-16','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-16',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-16','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-16','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-16','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-16','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-16')">💰 Finance/Revenue</span></td>
+                </tr><tr data-index="56" data-code="MDM-17" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">57</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-17')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-17','code',this)"><span class="category-icon icon-MDM"></span>MDM-17</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-17')">Exchange Rates</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('MDM-17')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-17','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-17',this)"><span class="dep-tag" title="Currencies">MDM-16</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-17','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-17','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-17','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-17','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-17')">💰 Finance/Revenue</span></td>
+                </tr><tr data-index="57" data-code="MDM-18" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">58</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-18')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-18','code',this)"><span class="category-icon icon-MDM"></span>MDM-18</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-18')">Aircraft Types</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('MDM-18')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-18','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-18',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-18','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-18','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-18','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-18','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-18')">📌 General</span></td>
+                </tr><tr data-index="58" data-code="MDM-19" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">59</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-19')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-19','code',this)"><span class="category-icon icon-MDM"></span>MDM-19</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-19')">Aircraft Equipment Types</a></td>
+                    <td><div class="pri-badge pri-5" onclick="openPriorityPopup('MDM-19')">5</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-19','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-19',this)"><span class="dep-tag" title="Aircraft Types">MDM-18</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-19','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-19','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-19','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-19','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-19')">📌 General</span></td>
+                </tr><tr data-index="59" data-code="FRW-09" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">60</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('FRW-09')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-09','code',this)"><span class="category-icon icon-Framework"></span>FRW-09</td>
+                    <td><a class="epic-link" onclick="openModal('FRW-09')">Help &amp; About</a></td>
+                    <td><div class="pri-badge pri-6" onclick="openPriorityPopup('FRW-09')">6</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-09','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('FRW-09',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-09','story',this)">2</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('FRW-09','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-09','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('FRW-09','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'FRW-09')">📌 General</span></td>
+                </tr><tr data-index="60" data-code="MDM-12" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">61</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-12')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-12','code',this)"><span class="category-icon icon-MDM"></span>MDM-12</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-12')">Categories</a></td>
+                    <td><div class="pri-badge pri-6" onclick="openPriorityPopup('MDM-12')">6</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-12','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-12',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-12','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-12','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-12','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-12','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-12')">💰 Finance/Revenue</span></td>
+                </tr><tr data-index="61" data-code="MDM-14" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">62</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-14')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-14','code',this)"><span class="category-icon icon-MDM"></span>MDM-14</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-14')">IATA Commodities</a></td>
+                    <td><div class="pri-badge pri-6" onclick="openPriorityPopup('MDM-14')">6</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-14','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-14',this)"><span class="dep-tag" title="Commodities">MDM-13</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-14','story',this)">3</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-14','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-14','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-14','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-14')">⚖️ Compliance</span></td>
+                </tr><tr data-index="62" data-code="MDM-20" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">63</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-20')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-20','code',this)"><span class="category-icon icon-MDM"></span>MDM-20</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-20')">General Masters</a></td>
+                    <td><div class="pri-badge pri-6" onclick="openPriorityPopup('MDM-20')">6</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-20','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-20',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-20','story',this)">2</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-20','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-20','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-20','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-20')">📌 General</span></td>
+                </tr><tr data-index="63" data-code="MDM-21" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">64</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-21')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-21','code',this)"><span class="category-icon icon-MDM"></span>MDM-21</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-21')">Generic Masters</a></td>
+                    <td><div class="pri-badge pri-6" onclick="openPriorityPopup('MDM-21')">6</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-21','link',this)">0 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-21',this)">–</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-21','story',this)">2</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-21','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-21','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-21','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-21')">📌 General</span></td>
+                </tr><tr data-index="64" data-code="MDM-29" draggable="true">
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">65</td>
+                    <td><div class="action-cell"><span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('MDM-29')">🔓</span></div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-29','code',this)"><span class="category-icon icon-MDM"></span>MDM-29</td>
+                    <td><a class="epic-link" onclick="openModal('MDM-29')">Currency Rate Providers</a></td>
+                    <td><div class="pri-badge pri-6" onclick="openPriorityPopup('MDM-29')">6</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-29','link',this)">1 </td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('MDM-29',this)"><span class="dep-tag" title="Currencies">MDM-16</span></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-29','story',this)">2</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('MDM-29','key_user',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-29','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" onchange="toggleCheckbox('MDM-29','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, 'MDM-29')">💰 Finance/Revenue</span></td>
+                </tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tag Dropdown -->
+    <div id="tag-dropdown" class="custom-dropdown" style="top: 498.75px; left: 1335.82px;">
+        <div id="tag-list"><div class="dropdown-item"><span>📌 General</span> <span class="delete-tag" onclick="deleteTag(event,'📌 General')">✕</span></div><div class="dropdown-item"><span>🔥 Critical Path</span> <span class="delete-tag" onclick="deleteTag(event,'🔥 Critical Path')">✕</span></div><div class="dropdown-item"><span>🛡️ Security</span> <span class="delete-tag" onclick="deleteTag(event,'🛡️ Security')">✕</span></div><div class="dropdown-item"><span>🏗️ Infrastructure</span> <span class="delete-tag" onclick="deleteTag(event,'🏗️ Infrastructure')">✕</span></div><div class="dropdown-item"><span>💡 User Experience</span> <span class="delete-tag" onclick="deleteTag(event,'💡 User Experience')">✕</span></div><div class="dropdown-item"><span>⚙️ Configuration</span> <span class="delete-tag" onclick="deleteTag(event,'⚙️ Configuration')">✕</span></div><div class="dropdown-item"><span>💰 Finance/Revenue</span> <span class="delete-tag" onclick="deleteTag(event,'💰 Finance/Revenue')">✕</span></div><div class="dropdown-item"><span>⚖️ Compliance</span> <span class="delete-tag" onclick="deleteTag(event,'⚖️ Compliance')">✕</span></div></div>
+        <div style="margin-top:5px; padding-top:5px; border-top:1px solid #e2e8f0;">
+            <input type="text" id="new-tag-input" style="width:100%; padding:5px;" placeholder="+ Tag &amp; Enter" onkeypress="handleNewTag(event)">
+        </div>
+    </div>
+
+    <!-- Add Epic Modal -->
+    <div class="modal-overlay" id="add-epic-modal">
+        <div class="modal-content">
+            <div class="modal-header"><h2>Yeni Epic Ekle</h2></div>
+            <div class="form-group">
+                <label>Kategori</label>
+                <select id="new-category">
+                    <option value="Framework">Framework</option>
+                    <option value="MDM">MDM</option>
+                    <option value="Core">Core</option>
+                </select>
+            </div>
+            <div class="form-group"><label>İsim</label><input type="text" id="new-name"></div>
+            <div class="form-group">
+                <label>Öncelik</label>
+                <select id="new-priority">
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option>
+                    <option value="4">4</option><option value="5">5</option><option value="6" selected="">6</option>
+                </select>
+            </div>
+            <div style="text-align:right;">
+                <button class="btn" style="background:#cbd5e0; color:#4a5568;" onclick="closeAddModal()">İptal</button>
+                <button class="btn add-btn" onclick="saveNewEpic()">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detail-modal">
+        <div class="modal-content">
+            <button class="close-modal" onclick="closeModal()">×</button>
+            <div class="modal-header"><h2 id="modal-title"><span style="color:#667eea">[CF-11]:</span> Core - Dashboards</h2></div>
+            <div id="modal-body"><div class="priority-card"><div class="priority-card-header">💡 Priority Reason &amp; Business Value</div><div class="priority-card-content">KPI.</div></div><div class="detail-section"><div class="dependency-box"><h3>🔗 Dependencies</h3><div><strong title="Reporting" style="cursor:help; border-bottom:1px dotted #667eea">CF-10</strong>: Report</div></div></div><div class="detail-section"><h3>📝 Gherkin Scenarios</h3><table class="story-table"><thead><tr><th width="20%">Story Name</th><th width="35%">User Story</th><th>Acceptance Criteria</th></tr></thead><tbody><tr>
+                        <td><strong>KPI</strong></td>
+                        <td>As a <strong>System User</strong>, I want to use the <strong>KPI</strong> feature so that I can perform my tasks.</td>
+                        <td><div class="gherkin"><span class="kw">Given</span> system ready<br><span class="kw">When</span> I execute KPI<br><span class="kw">Then</span> result is successful</div></td>
+                    </tr><tr>
+                        <td><strong>Chart</strong></td>
+                        <td>As a <strong>System User</strong>, I want to use the <strong>Chart</strong> feature so that I can perform my tasks.</td>
+                        <td><div class="gherkin"><span class="kw">Given</span> system ready<br><span class="kw">When</span> I execute Chart<br><span class="kw">Then</span> result is successful</div></td>
+                    </tr><tr>
+                        <td><strong>Views</strong></td>
+                        <td>As a <strong>System User</strong>, I want to use the <strong>Views</strong> feature so that I can perform my tasks.</td>
+                        <td><div class="gherkin"><span class="kw">Given</span> system ready<br><span class="kw">When</span> I execute Views<br><span class="kw">Then</span> result is successful</div></td>
+                    </tr></tbody></table></div></div>
+        </div>
+    </div>
+
+    <!-- Priority Popup -->
+    <div class="modal-overlay" id="pri-overlay" onclick="closePriorityEditor()"></div>
+    <div class="priority-popup" id="pri-popup" style="display: none;">
+        <h3 style="margin-bottom:10px;">Öncelik</h3>
+        <div class="priority-options" id="pri-options"><div class="p-opt pri-1">Pri 1</div><div class="p-opt pri-2">Pri 2</div><div class="p-opt pri-3">Pri 3</div><div class="p-opt pri-4">Pri 4</div><div class="p-opt pri-5">Pri 5</div><div class="p-opt pri-6">Pri 6</div></div>
+    </div>
+
+    <div id="status-message" style="display: none;">Dosya indirildi: Foxtrot_Backlog_v11_2025-12-02_11-36.html</div>
+
+    <script>
+        const MODULE_NAMES = { "Framework": "Framework", "MDM": "Master Data Management", "Core": "Core" };
+        let TAG_OPTIONS = ["📌 General", "🔥 Critical Path", "🛡️ Security", "🏗️ Infrastructure", "💡 User Experience", "⚙️ Configuration", "💰 Finance/Revenue", "⚖️ Compliance"];
+        
+        // Data from v10
+        let EPICS = [
+            {code: "FRW-01", name: "Authentication", cat: "Framework", pri: 1, link: 0, dependencies: "–", story: 6, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "🛡️ Security", priority_reason: "Tüm sistemin erişim temeli. Login olmadan hiçbir modül çalışmaz.", dependency_reasons: {}, sample_stories: ["Login", "JWT token", "Session timeout", "Refresh token", "Logout", "Error on invalid creds"]},
+            {code: "FRW-02", name: "Authorization", cat: "Framework", pri: 1, link: 1, dependencies: "FRW-01", story: 5, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "🛡️ Security", priority_reason: "Yetki kontrolü tüm modüller için kritik.", dependency_reasons: {"FRW-01": "Auth gerekli."}, sample_stories: ["Role-based menu", "API permission check", "UI visibility", "Role inheritance", "Unauthorized redirect"]},
+            {code: "FRW-03", name: "Reusable Components", cat: "Framework", pri: 1, link: 0, dependencies: "–", story: 7, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "💡 User Experience", priority_reason: "FE altyapısı.", dependency_reasons: {}, sample_stories: ["Table", "Modal", "Dropdown", "Pagination", "Toast", "Input field", "Grid"]},
+            {code: "CF-01", name: "User & User Group Mgmt", cat: "Core", pri: 1, link: 2, dependencies: "FRW-01, FRW-02", story: 5, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "🛡️ Security", priority_reason: "Yetki sistemi ana yapı.", dependency_reasons: {"FRW-01": "Auth gerekli", "FRW-02": "Admin only"}, sample_stories: ["User CRUD", "Group assign", "LDAP sync", "Reset password", "Search users"]},
+            {code: "FRW-16", name: "System Configuration", cat: "Framework", pri: 1, link: 2, dependencies: "FRW-01, FRW-02", story: 4, key_user: "", portal: true, navipar: false, locked: true, priority_tag: "⚙️ Configuration", priority_reason: "Sistem davranışı.", dependency_reasons: {"FRW-01": "Auth gerekli", "FRW-02": "Admin only"}, sample_stories: ["Param CRUD", "Token expiry", "Timeout config", "Env vars", "Config log"]},
+            {code: "MDM-06", name: "Countries", cat: "MDM", pri: 2, link: 0, dependencies: "–", story: 3, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "📌 General", priority_reason: "MDM kökü.", dependency_reasons: {}, sample_stories: ["Country CRUD", "ISO codes", "IATA mapping", "Status toggle"]},
+            {code: "MDM-07", name: "Cities", cat: "MDM", pri: 2, link: 1, dependencies: "MDM-06", story: 3, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "📌 General", priority_reason: "Country gerekli.", dependency_reasons: {"MDM-06": "Şehir ülkeye bağlı."}, sample_stories: ["City CRUD", "Linked to country", "Searchable"]},
+            {code: "MDM-04", name: "Airports", cat: "MDM", pri: 2, link: 2, dependencies: "MDM-06, MDM-07", story: 4, key_user: "", portal: true, navipar: true, locked: true, priority_tag: "🔥 Critical Path", priority_reason: "Booking ana veri.", dependency_reasons: {"MDM-06": "Ülke bilgisi", "MDM-07": "Şehir bilgisi"}, sample_stories: ["Airport CRUD", "IATA/ICAO val", "Region map"]},
+            {code: "FRW-10", name: "Filtering & Sorting", cat: "Framework", pri: 2, link: 1, dependencies: "FRW-03", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Listeleme temel.", dependency_reasons: {"FRW-03": "Table comp."}, sample_stories: ["Filter cols", "Save filter", "Sort", "Multi sort", "Persist prefs"]},
+            {code: "FRW-17", name: "Global Error Handling", cat: "Framework", pri: 2, link: 1, dependencies: "FRW-01", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🏗️ Infrastructure", priority_reason: "Backend hataları.", dependency_reasons: {"FRW-01": "Auth errors"}, sample_stories: ["API interceptor", "Error map", "Standard msg", "Global alert"]},
+            {code: "FRW-04", name: "Menu & Navigation", cat: "Framework", pri: 2, link: 1, dependencies: "FRW-02", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Yetki bazlı menü.", dependency_reasons: {"FRW-02": "Roles"}, sample_stories: ["Sidebar", "Breadcrumbs", "Collapse", "Routing"]},
+            {code: "FRW-20", name: "Audit Logging", cat: "Framework", pri: 2, link: 2, dependencies: "FRW-01, FRW-16", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🛡️ Security", priority_reason: "Güvenlik.", dependency_reasons: {"FRW-01": "User info", "FRW-16": "Config"}, sample_stories: ["CRUD log", "Diff", "Export", "Filter", "Trace"]},
+            {code: "FRW-21", name: "Application Logging", cat: "Framework", pri: 2, link: 2, dependencies: "FRW-01, FRW-20", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🏗️ Infrastructure", priority_reason: "Teknik takip.", dependency_reasons: {"FRW-01": "Context", "FRW-20": "Infra"}, sample_stories: ["Backend log", "Stack trace", "Error push", "Health"]},
+            {code: "CF-02", name: "Role & Role Group Mgmt", cat: "Core", pri: 2, link: 1, dependencies: "CF-01", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🛡️ Security", priority_reason: "Auth mgmt.", dependency_reasons: {"CF-01": "Users"}, sample_stories: ["Role CRUD", "Assign perm", "Groups", "Clone"]},
+            {code: "CF-04", name: "Parameter Mgmt", cat: "Core", pri: 2, link: 1, dependencies: "FRW-16", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "⚙️ Configuration", priority_reason: "Config ekranı.", dependency_reasons: {"FRW-16": "Sys config"}, sample_stories: ["Param CRUD", "Types", "Audit", "Dynamic"]},
+            {code: "MDM-22", name: "Timezones", cat: "MDM", pri: 2, link: 0, dependencies: "–", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Planlama.", dependency_reasons: {}, sample_stories: ["Timezone CRUD", "DST", "GMT Offset"]},
+            {code: "MDM-25", name: "Flights", cat: "MDM", pri: 2, link: 3, dependencies: "MDM-11, MDM-04, MDM-18", story: 5, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🔥 Critical Path", priority_reason: "Ops ana nesne.", dependency_reasons: {"MDM-11": "Airline", "MDM-04": "Airports", "MDM-18": "Aircraft"}, sample_stories: ["Flight Num", "Route", "Service Type"]},
+            {code: "MDM-26", name: "Flight Schedules", cat: "MDM", pri: 2, link: 2, dependencies: "MDM-25, MDM-22", story: 5, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🔥 Critical Path", priority_reason: "Takvim.", dependency_reasons: {"MDM-25": "Flight", "MDM-22": "Time"}, sample_stories: ["Schedule Gen", "Seasonality", "Slot"]},
+            {code: "MDM-27", name: "Flight Status", cat: "MDM", pri: 2, link: 1, dependencies: "MDM-26", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🔥 Critical Path", priority_reason: "Takip.", dependency_reasons: {"MDM-26": "Schedule"}, sample_stories: ["Status Codes", "Delay Codes", "Colors"]},
+            {code: "FRW-14", name: "Attachments", cat: "Framework", pri: 3, link: 1, dependencies: "FRW-01", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Dosya.", dependency_reasons: {"FRW-01": "User"}, sample_stories: ["Upload", "Preview", "Size limit", "Delete", "Audit"]},
+            {code: "FRW-12", name: "Excel Export", cat: "Framework", pri: 3, link: 1, dependencies: "FRW-03", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Rapor.", dependency_reasons: {"FRW-03": "Table"}, sample_stories: ["Export Excel", "CSV", "Filter based", "Filename"]},
+            {code: "FRW-13", name: "Bulk Operations", cat: "Framework", pri: 3, link: 1, dependencies: "FRW-03", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Hız.", dependency_reasons: {"FRW-03": "Table"}, sample_stories: ["Multi-select", "Mass delete", "Undo"]},
+            {code: "FRW-18", name: "Global Data Validation", cat: "Framework", pri: 3, link: 1, dependencies: "FRW-03", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🛡️ Security", priority_reason: "Veri kalite.", dependency_reasons: {"FRW-03": "Inputs"}, sample_stories: ["Form val", "API val", "Regex"]},
+            {code: "FRW-19", name: "Global Loading States", cat: "Framework", pri: 3, link: 0, dependencies: "–", story: 2, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "UX.", dependency_reasons: {}, sample_stories: ["Spinner", "Placeholder", "Skeleton"]},
+            {code: "FRW-15", name: "API & Integration Layer", cat: "Framework", pri: 3, link: 1, dependencies: "FRW-16", story: 5, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🏗️ Infrastructure", priority_reason: "Entegrasyon.", dependency_reasons: {"FRW-16": "Config"}, sample_stories: ["Gateway", "Swagger", "Auth", "Rate limit", "3rd party"]},
+            {code: "FRW-22", name: "Record History", cat: "Framework", pri: 3, link: 2, dependencies: "FRW-01, FRW-20", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🛡️ Security", priority_reason: "Geçmiş.", dependency_reasons: {"FRW-01": "User", "FRW-20": "Log"}, sample_stories: ["Change history", "Versioning", "Compare"]},
+            {code: "FRW-23", name: "Record Activity History", cat: "Framework", pri: 3, link: 2, dependencies: "FRW-01, FRW-20", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🛡️ Security", priority_reason: "Aktivite.", dependency_reasons: {"FRW-01": "User", "FRW-20": "Log"}, sample_stories: ["Action log", "Timeline", "Filter"]},
+            {code: "MDM-02", name: "Products & Services", cat: "MDM", pri: 3, link: 0, dependencies: "–", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "Tarife.", dependency_reasons: {}, sample_stories: ["Product CRUD", "Priority", "Service map"]},
+            {code: "MDM-13", name: "Commodities", cat: "MDM", pri: 3, link: 1, dependencies: "MDM-02", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "⚖️ Compliance", priority_reason: "Emtia.", dependency_reasons: {"MDM-02": "Product"}, sample_stories: ["Commodity CRUD", "IATA type", "Handling type"]},
+            {code: "MDM-03", name: "Stations", cat: "MDM", pri: 3, link: 2, dependencies: "MDM-04, MDM-07", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "İstasyon.", dependency_reasons: {"MDM-04": "Airport", "MDM-07": "City"}, sample_stories: ["Station CRUD", "Contact", "Capacity"]},
+            {code: "CF-03", name: "Permission (Scope) Mgmt", cat: "Core", pri: 3, link: 2, dependencies: "CF-02, FRW-02", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🛡️ Security", priority_reason: "Detay yetki.", dependency_reasons: {"CF-02": "Role", "FRW-02": "Auth"}, sample_stories: ["API perm", "Scope", "Restrict"]},
+            {code: "CF-05", name: "Notification Mgmt", cat: "Core", pri: 3, link: 2, dependencies: "FRW-16, CF-01", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "İletişim.", dependency_reasons: {"FRW-16": "Mail server", "CF-01": "User"}, sample_stories: ["Email tmpl", "In-app", "Tracking"]},
+            {code: "CF-06", name: "Purging & Archiving", cat: "Core", pri: 3, link: 2, dependencies: "FRW-16, CF-04", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🏗️ Infrastructure", priority_reason: "Temizlik.", dependency_reasons: {"FRW-16": "Policy", "CF-04": "Params"}, sample_stories: ["Archive job", "Retention", "Report"]},
+            {code: "CF-07", name: "Scheduled Jobs", cat: "Core", pri: 3, link: 1, dependencies: "CF-04", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🏗️ Infrastructure", priority_reason: "Otomasyon.", dependency_reasons: {"CF-04": "Params"}, sample_stories: ["Scheduler", "Logs", "Retry"]},
+            {code: "CF-08", name: "Workflows", cat: "Core", pri: 3, link: 2, dependencies: "CF-01, CF-02", story: 5, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Süreç.", dependency_reasons: {"CF-01": "User", "CF-02": "Role"}, sample_stories: ["Builder", "Steps", "Transition"]},
+            {code: "CF-09", name: "Messaging", cat: "Core", pri: 3, link: 2, dependencies: "FRW-16, CF-04", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "🏗️ Infrastructure", priority_reason: "Mesajlaşma.", dependency_reasons: {"FRW-16": "Broker", "CF-04": "Queue"}, sample_stories: ["Pub/Sub", "Queue", "History"]},
+            {code: "CF-10", name: "Reporting", cat: "Core", pri: 3, link: 2, dependencies: "MDM, FRW-03", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "Rapor.", dependency_reasons: {"MDM": "Data", "FRW-03": "UI"}, sample_stories: ["Builder", "Schedule", "Export"]},
+            {code: "MDM-23", name: "Languages", cat: "MDM", pri: 3, link: 0, dependencies: "–", story: 2, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Dil.", dependency_reasons: {}, sample_stories: ["Lang CRUD", "ISO", "Local keys"]},
+            {code: "MDM-24", name: "ULDs", cat: "MDM", pri: 3, link: 1, dependencies: "MDM-19", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Kargo.", dependency_reasons: {"MDM-19": "Eq Types"}, sample_stories: ["ULD Type", "Tare", "Contour"]},
+            {code: "MDM-28", name: "Commodity Regulations", cat: "MDM", pri: 3, link: 1, dependencies: "MDM-13", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "⚖️ Compliance", priority_reason: "Yasal.", dependency_reasons: {"MDM-13": "Comm"}, sample_stories: ["DGR", "Temp", "Embargo"]},
+            {code: "FRW-05", name: "Home", cat: "Framework", pri: 4, link: 1, dependencies: "FRW-04", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Ana sayfa.", dependency_reasons: {"FRW-04": "Menu"}, sample_stories: ["Dashboard", "Welcome", "Links"]},
+            {code: "FRW-07", name: "Quick Search", cat: "Framework", pri: 4, link: 1, dependencies: "FRW-03", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Hızlı arama.", dependency_reasons: {"FRW-03": "UI"}, sample_stories: ["Global search", "Highlight", "Shortcut"]},
+            {code: "FRW-08", name: "Detailed Search", cat: "Framework", pri: 4, link: 2, dependencies: "FRW-03, FRW-07", story: 4, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Detay arama.", dependency_reasons: {"FRW-03": "UI", "FRW-07": "Quick"}, sample_stories: ["Adv filters", "Groups", "Saved"]},
+            {code: "FRW-11", name: "Filter Saving", cat: "Framework", pri: 4, link: 1, dependencies: "FRW-10", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Kayıtlı filtre.", dependency_reasons: {"FRW-10": "Filtering"}, sample_stories: ["Save", "Default", "Apply"]},
+            {code: "MDM-01", name: "Routing Tables", cat: "MDM", pri: 4, link: 2, dependencies: "MDM-04, MDM-11", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Rota.", dependency_reasons: {"MDM-04": "Airport", "MDM-11": "Airline"}, sample_stories: ["Route CRUD", "Legs"]},
+            {code: "MDM-15", name: "Handling Codes", cat: "MDM", pri: 4, link: 1, dependencies: "MDM-13", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "⚖️ Compliance", priority_reason: "SHC.", dependency_reasons: {"MDM-13": "Comm"}, sample_stories: ["SCC", "SHC", "Restrict"]},
+            {code: "MDM-05", name: "Airport Pairs", cat: "MDM", pri: 4, link: 2, dependencies: "MDM-04, MDM-06", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "OD Pair.", dependency_reasons: {"MDM-04": "Airport", "MDM-06": "Country"}, sample_stories: ["OD Pair", "Time"]},
+            {code: "MDM-08", name: "City Pairs", cat: "MDM", pri: 4, link: 2, dependencies: "MDM-07, MDM-06", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "City Pair.", dependency_reasons: {"MDM-07": "City", "MDM-06": "Country"}, sample_stories: ["City Pair", "Route map"]},
+            {code: "MDM-09", name: "Regions", cat: "MDM", pri: 4, link: 0, dependencies: "–", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Bölge.", dependency_reasons: {}, sample_stories: ["Region", "Group"]},
+            {code: "CF-11", name: "Dashboards", cat: "Core", pri: 4, link: 1, dependencies: "CF-10", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "KPI.", dependency_reasons: {"CF-10": "Report"}, sample_stories: ["KPI", "Chart", "Views"]},
+            {code: "FRW-06", name: "My Space", cat: "Framework", pri: 5, link: 1, dependencies: "FRW-05", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Kişisel.", dependency_reasons: {"FRW-05": "Home"}, sample_stories: ["Favs", "Saved", "Recent"]},
+            {code: "FRW-24", name: "Announcements", cat: "Framework", pri: 5, link: 1, dependencies: "FRW-01", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💡 User Experience", priority_reason: "Duyuru.", dependency_reasons: {"FRW-01": "Auth"}, sample_stories: ["List", "Read", "Badge"]},
+            {code: "MDM-10", name: "Airport Calendars", cat: "MDM", pri: 5, link: 1, dependencies: "MDM-04", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Takvim.", dependency_reasons: {"MDM-04": "Airport"}, sample_stories: ["Calendar", "Holiday"]},
+            {code: "MDM-11", name: "Airlines", cat: "MDM", pri: 5, link: 1, dependencies: "MDM-06", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Havayolu.", dependency_reasons: {"MDM-06": "Country"}, sample_stories: ["Airline", "ICAO"]},
+            {code: "MDM-16", name: "Currencies", cat: "MDM", pri: 5, link: 0, dependencies: "–", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "Para birimi.", dependency_reasons: {}, sample_stories: ["Currency", "ISO"]},
+            {code: "MDM-17", name: "Exchange Rates", cat: "MDM", pri: 5, link: 1, dependencies: "MDM-16", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "Kur.", dependency_reasons: {"MDM-16": "Curr"}, sample_stories: ["Rate", "Date", "Hist"]},
+            {code: "MDM-18", name: "Aircraft Types", cat: "MDM", pri: 5, link: 0, dependencies: "–", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Uçak tipi.", dependency_reasons: {}, sample_stories: ["Aircraft", "Payload"]},
+            {code: "MDM-19", name: "Aircraft Equipment Types", cat: "MDM", pri: 5, link: 1, dependencies: "MDM-18", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Ekipman.", dependency_reasons: {"MDM-18": "Type"}, sample_stories: ["Eq", "Cap link"]},
+            {code: "FRW-09", name: "Help & About", cat: "Framework", pri: 6, link: 0, dependencies: "–", story: 2, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Destek.", dependency_reasons: {}, sample_stories: ["Version", "Help", "Support"]},
+            {code: "MDM-12", name: "Categories", cat: "MDM", pri: 6, link: 0, dependencies: "–", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "Kategori.", dependency_reasons: {}, sample_stories: ["Cat", "Prod link"]},
+            {code: "MDM-14", name: "IATA Commodities", cat: "MDM", pri: 6, link: 1, dependencies: "MDM-13", story: 3, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "⚖️ Compliance", priority_reason: "IATA.", dependency_reasons: {"MDM-13": "Comm"}, sample_stories: ["Import", "Map"]},
+            {code: "MDM-20", name: "General Masters", cat: "MDM", pri: 6, link: 0, dependencies: "–", story: 2, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Genel.", dependency_reasons: {}, sample_stories: ["Status", "Flag"]},
+            {code: "MDM-21", name: "Generic Masters", cat: "MDM", pri: 6, link: 0, dependencies: "–", story: 2, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "📌 General", priority_reason: "Jenerik.", dependency_reasons: {}, sample_stories: ["Reasons", "Dropdowns"]},
+            {code: "MDM-29", name: "Currency Rate Providers", cat: "MDM", pri: 6, link: 1, dependencies: "MDM-16", story: 2, key_user: "", portal: false, navipar: false, locked: false, priority_tag: "💰 Finance/Revenue", priority_reason: "Kur sağlayıcı.", dependency_reasons: {"MDM-16": "Curr"}, sample_stories: ["Provider", "Auto-fetch", "Alert"]}
+        ];
+
+        let currentEditingEpic = null;
+        let draggedRow = null;
+        let activeFilters = {};
+
+        // Init
+        renderTable();
+
+        // --- Filtering Logic ---
+        document.addEventListener('click', function(e) {
+            if(!e.target.closest('.filter-icon') && !e.target.closest('.filter-dropdown')) {
+                document.querySelectorAll('.filter-dropdown').forEach(d => d.classList.remove('show'));
+            }
+        });
+
+        function toggleFilterMenu(e, col) {
+            e.stopPropagation();
+            document.querySelectorAll('.filter-dropdown').forEach(d => d.remove());
+            const existing = e.target.parentNode.querySelector('.filter-dropdown');
+            if(existing) { existing.remove(); return; }
+
+            const uniqueValues = [...new Set(EPICS.map(ep => String(ep[col] || "").trim()))].sort();
+            const dropdown = document.createElement('div');
+            dropdown.className = 'filter-dropdown show';
+            let html = `<div class="filter-option" onclick="applyFilter('${col}', null)"><b>🔄 Reset Filter</b></div>`;
+            uniqueValues.forEach(val => {
+                const isActive = activeFilters[col] === val;
+                html += `<div class="filter-option" onclick="applyFilter('${col}', '${val}')" style="${isActive ? 'background:#edf2f7; font-weight:bold;' : ''}">
+                    <span>${val || '(Empty)'}</span> ${isActive ? '✓' : ''}
+                </div>`;
+            });
+            dropdown.innerHTML = html;
+            e.target.parentNode.style.position = 'relative';
+            e.target.parentNode.appendChild(dropdown);
+        }
+
+        function applyFilter(col, val) {
+            if (val === null) {
+                delete activeFilters[col];
+                document.querySelectorAll(`.filter-icon[onclick*="'${col}'"]`).forEach(el => el.classList.remove('active'));
+            } else {
+                activeFilters[col] = val;
+                document.querySelectorAll(`.filter-icon[onclick*="'${col}'"]`).forEach(el => el.classList.add('active'));
+            }
+            document.querySelectorAll('.filter-dropdown').forEach(d => d.remove());
+            renderTable();
+        }
+
+        function renderTable() {
+            // Sorting Logic: 
+            // 1. Priority (Ascending 1 -> 6)
+            // 2. Locked items stay in relative order if possible, but Pri overrides visual sort
+            // Actually, to fix the user request: "When I change a non-locked item to Pri 1, it should move up"
+            // We MUST sort the main array or a copy of it before rendering.
+            
+            // We'll sort a copy to not mess up original array indices during drag/drop too much, 
+            // BUT drag/drop relies on index. So we better sort the actual EPICS array or 
+            // just render in sorted order. To allow "smart sort", we will sort the EPICS array.
+            
+            EPICS.sort((a, b) => {
+                // If priority is different, sort by priority
+                if (a.pri !== b.pri) return a.pri - b.pri;
+                // If same priority, keep existing relative order (stable sort)
+                return 0; 
+            });
+
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = '';
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+            EPICS.forEach((epic, index) => {
+                if (searchTerm) {
+                    const text = (epic.name + epic.code + (epic.sample_stories||[]).join(' ')).toLowerCase();
+                    if (!text.includes(searchTerm)) return;
+                }
+                for (let col in activeFilters) {
+                    if (String(epic[col] || "").trim() !== activeFilters[col]) return;
+                }
+
+                const tr = document.createElement('tr');
+                tr.dataset.index = index;
+                tr.dataset.code = epic.code;
+                if(epic.locked) tr.classList.add('locked-row');
+                else tr.draggable = true;
+
+                let alarmHtml = '';
+                let depHtml = '–';
+                if(epic.dependencies && epic.dependencies !== '–') {
+                    const deps = epic.dependencies.split(',').map(d => d.trim());
+                    let hasIssue = false;
+                    let issueText = "";
+                    deps.forEach(d => {
+                        const depIndex = EPICS.findIndex(e => e.code === d);
+                        if(depIndex > index) { hasIssue = true; issueText += `${d} (Row: ${depIndex+1}) is below!\n`; }
+                    });
+                    if(hasIssue) alarmHtml = `<span class="dep-alarm" title="${issueText}">❗</span>`;
+                    depHtml = deps.map(d => {
+                        const t = EPICS.find(e => e.code === d);
+                        return `<span class="dep-tag" title="${t?t.name:'?'}">${d}</span>`;
+                    }).join(', ');
+                }
+
+                let actionCell = epic.locked 
+                    ? `<span class="locked-state" onclick="toggleLock('${epic.code}')">🔒</span>`
+                    : `<span class="drag-handle">⋮⋮</span><span class="lock-toggle" onclick="toggleLock('${epic.code}')">🔓</span>`;
+
+                tr.innerHTML = `
+                    <td style="color:#718096; font-size:0.8em; text-align:center;">${index+1}</td>
+                    <td><div class="action-cell">${actionCell}</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('${epic.code}','code',this)"><span class="category-icon icon-${epic.cat}"></span>${epic.code}</td>
+                    <td><a class="epic-link" onclick="openModal('${epic.code}')">${epic.name}</a></td>
+                    <td><div class="pri-badge pri-${epic.pri}" onclick="openPriorityPopup('${epic.code}')">${epic.pri}</div></td>
+                    <td contenteditable="true" class="editable" onblur="updateField('${epic.code}','link',this)">${epic.link} ${alarmHtml}</td>
+                    <td contenteditable="true" class="editable" onfocus="removeHtml(this)" onblur="updateDeps('${epic.code}',this)">${depHtml}</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('${epic.code}','story',this)">${epic.story}</td>
+                    <td contenteditable="true" class="editable" onblur="updateField('${epic.code}','key_user',this)">${epic.key_user||''}</td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" ${epic.portal?'checked':''} onchange="toggleCheckbox('${epic.code}','portal',this)"></td>
+                    <td style="text-align:center;"><input type="checkbox" class="styled-checkbox" ${epic.navipar?'checked':''} onchange="toggleCheckbox('${epic.code}','navipar',this)"></td>
+                    <td><span class="tag-badge" onclick="openTagDropdown(event, '${epic.code}')">${epic.priority_tag||'📌 General'}</span></td>
+                `;
+
+                if(!epic.locked) addDragEvents(tr);
+                tbody.appendChild(tr);
+            });
+            
+            document.querySelector('.subtitle').innerText = `${EPICS.length} Epic • Sütun Filtreleme • Gelişmiş Sürükle/Bırak`;
+        }
+
+        // --- Drag & Drop Logic ---
+        function addDragEvents(row) {
+            row.addEventListener('dragstart', function(e) {
+                draggedRow = this;
+                e.dataTransfer.effectAllowed = 'move';
+                this.style.opacity = '0.4';
+            });
+            row.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if(this === draggedRow) return;
+                const rect = this.getBoundingClientRect();
+                const mid = (rect.top + rect.bottom) / 2;
+                document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
+                    el.classList.remove('drag-over-top', 'drag-over-bottom');
+                });
+                if (e.clientY < mid) this.classList.add('drag-over-top');
+                else this.classList.add('drag-over-bottom');
+            });
+            row.addEventListener('dragleave', function() {
+                this.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+            row.addEventListener('drop', function(e) {
+                e.stopPropagation();
+                this.classList.remove('drag-over-top', 'drag-over-bottom');
+                if (draggedRow !== this) {
+                    const srcIdx = parseInt(draggedRow.dataset.index);
+                    let targetIdx = parseInt(this.dataset.index);
+                    const rect = this.getBoundingClientRect();
+                    const mid = (rect.top + rect.bottom) / 2;
+                    if (e.clientY > mid) targetIdx++; 
+                    if (targetIdx > srcIdx) targetIdx--; 
+
+                    const [removed] = EPICS.splice(srcIdx, 1);
+                    EPICS.splice(targetIdx, 0, removed);
+                    renderTable();
+                }
+                return false;
+            });
+            row.addEventListener('dragend', function() {
+                this.style.opacity = '1';
+                document.querySelectorAll('.drag-over-top, .drag-over-bottom').forEach(el => {
+                    el.classList.remove('drag-over-top', 'drag-over-bottom');
+                });
+            });
+        }
+
+        // --- Other Functions ---
+        function toggleLock(code) { const e = EPICS.find(x=>x.code===code); if(e){ e.locked = !e.locked; renderTable(); } }
+        function removeHtml(el) { el.innerText = el.innerText.replace(/,/g, ', '); }
+        function updateDeps(code, el) { const val = el.innerText.trim(); const epic = EPICS.find(e=>e.code===code); if(epic) { epic.dependencies = val; renderTable(); } }
+        function updateField(code, f, el) { const e=EPICS.find(x=>x.code===code); if(e) e[f]=el.innerText.trim(); }
+        function toggleCheckbox(code, f, el) { const e=EPICS.find(x=>x.code===code); if(e) e[f]=el.checked; }
+
+        // Modal
+        function openModal(code) {
+            const epic = EPICS.find(e => e.code === code);
+            if(!epic) return;
+            const fullMod = MODULE_NAMES[epic.cat] || epic.cat;
+            document.getElementById('modal-title').innerHTML = `<span style="color:#667eea">[${epic.code}]:</span> ${fullMod} - ${epic.name}`;
+            
+            let html = '';
+            if(epic.priority_reason) {
+                html += `<div class="priority-card"><div class="priority-card-header">💡 Priority Reason & Business Value</div><div class="priority-card-content">${epic.priority_reason}</div></div>`;
+            }
+            
+            if(epic.dependencies !== '–' && epic.dependencies.trim() !== '') {
+                html += `<div class="detail-section"><div class="dependency-box"><h3>🔗 Dependencies</h3>`;
+                epic.dependencies.split(',').map(d=>d.trim()).forEach(d => {
+                    const t = EPICS.find(x=>x.code===d);
+                    const r = epic.dependency_reasons[d] || "Reason not spec.";
+                    html += `<div><strong title="${t?t.name:''}" style="cursor:help; border-bottom:1px dotted #667eea">${d}</strong>: ${r}</div>`;
+                });
+                html += `</div></div>`;
+            }
+
+            html += `<div class="detail-section"><h3>📝 Gherkin Scenarios</h3><table class="story-table"><thead><tr><th width="20%">Story Name</th><th width="35%">User Story</th><th>Acceptance Criteria</th></tr></thead><tbody>`;
+            if(epic.sample_stories && epic.sample_stories.length > 0) {
+                epic.sample_stories.forEach(s => {
+                    // Better User Story Sentence Construction
+                    const actor = epic.key_user ? epic.key_user : "System User";
+                    const userStoryText = `As a <strong>${actor}</strong>, I want to use the <strong>${s}</strong> feature so that I can perform my tasks.`;
+                    
+                    html += `<tr>
+                        <td><strong>${s}</strong></td>
+                        <td>${userStoryText}</td>
+                        <td><div class="gherkin"><span class="kw">Given</span> system ready<br><span class="kw">When</span> I execute ${s}<br><span class="kw">Then</span> result is successful</div></td>
+                    </tr>`;
+                });
+            } else { html += `<tr><td colspan="3" style="text-align:center; color:#a0aec0;">No stories.</td></tr>`; }
+            html += `</tbody></table></div>`;
+            
+            document.getElementById('modal-body').innerHTML = html;
+            document.getElementById('detail-modal').classList.add('active');
+        }
+        function closeModal() { document.getElementById('detail-modal').classList.remove('active'); }
+
+        // Add/Save
+        function openAddModal() { document.getElementById('new-name').value=''; document.getElementById('add-epic-modal').classList.add('active'); }
+        function closeAddModal() { document.getElementById('add-epic-modal').classList.remove('active'); }
+        function saveNewEpic() {
+            const name = document.getElementById('new-name').value; if(!name) return alert("İsim giriniz");
+            const cat = document.getElementById('new-category').value;
+            const pri = parseInt(document.getElementById('new-priority').value);
+            let prefix = cat === "Framework" ? "FRW" : cat === "MDM" ? "MDM" : "CF";
+            let max = 0; EPICS.forEach(e=>{ if(e.code.startsWith(prefix)) { const n=parseInt(e.code.split('-')[1]); if(n>max) max=n; }});
+            const code = `${prefix}-${(max+1)<10?'0'+(max+1):(max+1)}`;
+            EPICS.unshift({ code:code, name:name, cat:cat, pri:pri, link:0, dependencies:"–", story:0, key_user:"", portal:false, navipar:false, locked:false, priority_tag:"📌 General", priority_reason:"New", dependency_reasons:{}, sample_stories:[] });
+            renderTable(); closeAddModal();
+        }
+
+        // Dropdown
+        document.addEventListener('click', function(e) { if(!document.getElementById('tag-dropdown').contains(e.target) && !e.target.classList.contains('tag-badge')) document.getElementById('tag-dropdown').classList.remove('active'); });
+        function openTagDropdown(e, code) {
+            e.stopPropagation(); currentEditingEpic = code;
+            const d = document.getElementById('tag-dropdown');
+            const r = e.target.getBoundingClientRect();
+            d.style.top = (window.scrollY + r.bottom + 5) + 'px';
+            d.style.left = (window.scrollX + r.left) + 'px';
+            const list = document.getElementById('tag-list'); list.innerHTML = '';
+            TAG_OPTIONS.forEach(t => {
+                const div = document.createElement('div'); div.className = 'dropdown-item';
+                div.innerHTML = `<span>${t}</span> <span class="delete-tag" onclick="deleteTag(event,'${t}')">✕</span>`;
+                div.onclick = (ev) => { if(!ev.target.classList.contains('delete-tag')) selectTag(t); };
+                list.appendChild(div);
+            });
+            d.classList.add('active'); document.getElementById('new-tag-input').focus();
+        }
+        function selectTag(t) { const e = EPICS.find(x=>x.code===currentEditingEpic); if(e) e.priority_tag=t; renderTable(); document.getElementById('tag-dropdown').classList.remove('active'); }
+        function handleNewTag(e) { if(e.key==='Enter' && e.target.value.trim()) { const val=e.target.value.trim(); if(!TAG_OPTIONS.includes(val)) TAG_OPTIONS.push(val); selectTag(val); e.target.value=''; } }
+        function deleteTag(e, t) { e.stopPropagation(); if(confirm('Delete?')) { TAG_OPTIONS = TAG_OPTIONS.filter(x=>x!==t); renderTable(); document.getElementById('tag-dropdown').classList.remove('active'); } }
+
+        function openPriorityPopup(code) {
+            currentEditingEpic = code; const p = document.getElementById('pri-popup');
+            const o = document.getElementById('pri-options'); o.innerHTML = '';
+            for(let i=1; i<=6; i++) {
+                const d = document.createElement('div'); d.className = `p-opt pri-${i}`; d.textContent = `Pri ${i}`;
+                d.onclick = () => { const e=EPICS.find(x=>x.code===currentEditingEpic); if(e) { e.pri=i; renderTable(); } closePriorityEditor(); };
+                o.appendChild(d);
+            }
+            document.getElementById('pri-overlay').classList.add('active'); p.style.display = 'block';
+        }
+        function closePriorityEditor() { document.getElementById('pri-overlay').classList.remove('active'); document.getElementById('pri-popup').style.display = 'none'; }
+
+        function downloadHTML() {
+            const html = document.documentElement.outerHTML;
+            const script = `let EPICS = ${JSON.stringify(EPICS, null, 4)}; let TAG_OPTIONS = ${JSON.stringify(TAG_OPTIONS)};`;
+            let final = html.replace(/let EPICS = \[[\s\S]*?\];[\s\S]*?let TAG_OPTIONS = \[[\s\S]*?\];/, script);
+            const now = new Date();
+            const dateStr = now.toISOString().slice(0,10);
+            const timeStr = now.toTimeString().slice(0,5).replace(':','-');
+            const filename = `Foxtrot_Backlog_v11_${dateStr}_${timeStr}.html`;
+            const blob = new Blob([final], {type: 'text/html'});
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            const s = document.getElementById('status-message'); s.textContent = "Dosya indirildi: " + filename; s.style.display='block'; setTimeout(() => s.style.display='none', 3000);
+        }
+    </script>
+
+</body></html>
